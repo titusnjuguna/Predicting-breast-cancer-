@@ -1,0 +1,122 @@
+---
+title: "Predicting Breast cancer"
+author: "Titus Njonjo"
+date: "5/22/2020"
+output: html_document
+---
+
+## This is **an analysis of breast cancer** data using decision tree algorithm to predict if a patient has breast cancer or not. the data has the following variables:
+* class  * age  * menopause  * tumour size  * inv nodes	* nodes cap	 * deg-malig * breast  * breast-quad
+* irradiat
+
+##Loading required packages 
+```{r  message= FALSE, Warning=FALSE, loading required packages }
+library(rpart)
+library(rpart.plot)
+library(readr)
+library(rattle)
+library(caret)
+library(readr)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+```
+## the dataset can be described as majorly as categorical data
+```{r message=FALSE,warning=FALSE ,importing the dataset}
+breast <- read_csv("C:/Users/LAIKAM-TITO/desktop/MY PROJECT/breast-cancer.csv")
+breast <- mutate_if(breast,is.character,as.factor)
+str(breast)
+```
+## Checking if the data is complete.From the results , it is with no missing values 
+```{r}
+table(complete.cases(breast))
+```
+```{r}
+dataentry(breast,)
+
+```
+
+## Splitting the data set for training and testing
+```{r}
+set.seed(1000)
+split <- sample(seq_len(nrow(breast)), size=floor(0.8*nrow(breast)))
+train <- breast[split,]
+testing <- breast[-split,]
+train
+testing
+```
+
+## At this stage , i will be doing an exploratory analysis from the data, where I wish to answer the following questions from the data:
+* which age-group has high likelihood to be diagonised with breast cancer?
+* Which breast is likely to be affected by cancerous cells ?
+* which section of the breast is likely to be affected by the cancerous cells ?
+
+## Q1.which age-group has high likelihood to be diagonised with breast cancer?
+```{r Exploratory data analysis}
+qplot(class, data=train, fill=age)+facet_grid(.~age)+theme(axis.text.x = element_text(angle=90, vjust=0.9))+labs(title="Women in the 50-59 age bracket are likely to be diagonised with breast cancer,
+while women in the 20-29 and 70-79 age bracket 
+are less likely to be diagonised",
+  y="Count",
+ caption = "Source:Institute of Oncology")
+ggsave("agegroup.pdf",)
+```
+## Q2. Which breast is likely to be affected by cancerous cells ?
+```{r}
+qplot(class, data=train, fill=breast)+facet_grid(.~breast)+labs(title = "The left breast is more likely to be affected by cancerous cell ",
+y="Count",
+caption = "Source: Institute of Oncology ")
+
+```
+## Q3.Which section of the breast is likely to be affected by the cancerous cells ?
+```{r}
+qplot(class, data=train, fill= `breast-quad`)+facet_grid(.~`breast-quad`)+theme(axis.text.x=element_text(angle=90,vjust=0.9))
+```
+##Q4. Which group of women are more likely tobe diagonised with breast cancer?
+```{r}
+qplot(class, data=breast, fill=menopause)+facet_grid(.~menopause)+theme(axis.text.x=element_text(angle=90,vjust=0.9))+ labs(title = "Women in the premenopause group are  likely
+to be diagonised with breast cancer", y="count")
+```
+##Q5. Does tumor size indicate cancer?
+```{r}
+qplot(class, data=breast, fill=`tumor-size`)+facet_grid(.~`tumor-size`)+theme(axis.text.x=element_text(angle=90,vjust=0.9))+ labs(title = "Women in the premenopause group are  likely
+to be diagonised with breast cancer", y="count")
+```
+```{r SPLITTING FEATURES}
+number.perfect.splits <- apply(X=breast[-1], MARGIN = 2, FUN = function(col){
+t <- table(breast$class,col)
+sum(t == 0)
+})
+order <- order(number.perfect.splits,decreasing = TRUE)
+number.perfect.splits<- number.perfect.splits[order]
+par(mar=c(10,4,3,3))
+barplot(number.perfect.splits,
+main="Number of perfect splits vs feature",
+xlab="",ylab="Feature",las=2,col="wheat")
+```
+
+```{r modeling}
+penalty.matrix <- matrix(c(0,1,10,0), byrow=TRUE, nrow=2)
+penalty.matrix
+```
+```{r}
+tree <- rpart(class~. , data=train,parms=list(loss=penalty.matrix), method="class")
+tree
+```
+##Ploting a decision tree
+```{r}
+rpart.plot(tree,nn=TRUE)
+```
+##Making prediction out of the model
+```{r}
+pred1 <- predict(object=tree,testing[-1],type="class")
+write_file(pred1,"C:/Users/LAIKAM-TITO/Desktop",)
+```
+```{r}
+
+```
+```{r}
+h <- table(testing$class,pred1) 
+confusionMatrix(h)
+h
+```
+
